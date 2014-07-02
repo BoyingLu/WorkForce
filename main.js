@@ -21,22 +21,30 @@ var s = http.createServer(handle_incoming_request);
 s.listen(8080);
 
 function getHomePage(file, res) {
-    var rs = fs.createReadStream(file);
-    var ct = content_type_for_path(file);
-    res.writeHead(200, { "Content-Type" : ct });
-
-    rs.on (
-       'error', 
-       function (e) {
-            res.writeHead(404, { "Content-Type" : "application/json" });
+    fs.exists(file, function (exists) {
+        if (!exists) {
+            res.writeHead(404, { "Content-Type" : "application/json"});
             var out = { error : "not_found",
                         message : "'" + file + "' not found"};
-            res.end(JSON.stringify(out) + "\n");
+            res.send(JSON.stringify(out) + "\n");
             return;
-       }
-    );
+        }
 
-    rs.pipe(res);
+        var rs = fs.createReadStream(file);
+
+        rs.on (
+            'error', 
+            function (e) {
+               res.end();
+            }
+        ); 
+
+        var ct = content_type_for_path(file);
+        res.writeHead(200, { "Content-Type" : ct });
+        rs.pipe(res);
+    });
+
+
 }
 
 function content_type_for_path(file) {
